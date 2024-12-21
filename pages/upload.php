@@ -1,26 +1,39 @@
 <?php
+// Подключаем файл с базой данных
 require_once __DIR__ . '/../includes/db.php';
+// Подключаем файл с вспомогательными функциями
 require_once __DIR__ . '/../includes/functions.php';
 
+// Проверяем, авторизован ли пользователь. Если нет, перенаправляем на страницу входа
 if (!isLoggedIn()) {
     redirect('../auth/login.php');
 }
 
+// Обрабатываем запрос на загрузку файла (если метод запроса POST и присутствует файл 'track')
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['track'])) {
+    // Получаем название трека из формы (если оно передано)
     $title = $_POST['title'] ?? '';
+    // Получаем информацию о загружаемом файле
     $file = $_FILES['track'];
+    // Определяем директорию для сохранения файлов
     $targetDir = __DIR__ . '/../uploads/';
+    // Формируем полный путь к файлу, куда он будет сохранён
     $filePath = $targetDir . basename($file['name']);
 
+    // Перемещаем загруженный файл в целевую директорию
     if (move_uploaded_file($file['tmp_name'], $filePath)) {
+        // Если файл успешно загружен, сохраняем его в базе данных
         $stmt = $pdo->prepare("INSERT INTO tracks (title, file) VALUES (?, ?)");
         $stmt->execute([$title, basename($file['name'])]);
+        // Уведомление об успешной загрузке
         $success = "Трек успешно загружен!";
     } else {
+        // Уведомление об ошибке загрузки
         $error = "Ошибка загрузки трека.";
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">

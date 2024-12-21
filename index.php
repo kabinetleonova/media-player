@@ -1,34 +1,47 @@
 <?php
-require_once __DIR__ . '/includes/db.php';
-require_once __DIR__ . '/includes/functions.php';
+// Подключение необходимых файлов
+require_once __DIR__ . '/includes/db.php'; // Файл подключения к базе данных
+require_once __DIR__ . '/includes/functions.php'; // Вспомогательные функции
 
+// Получение параметра поиска (если есть)
 $search = $_GET['search'] ?? '';
+
+// Получение ID пользователя из сессии
 $userId = $_SESSION['user_id'] ?? null;
 
-// Получение треков с учётом поиска
+// Получение треков из базы данных
 if ($search) {
+    // Если указан поиск, получаем только подходящие треки
     $stmt = $pdo->prepare("SELECT * FROM tracks WHERE title LIKE ? ORDER BY id DESC");
     $stmt->execute(['%' . $search . '%']);
 } else {
+    // Если поиска нет, получаем все треки
     $stmt = $pdo->query("SELECT * FROM tracks ORDER BY id DESC");
 }
-
 $tracks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Обработка лайков через AJAX
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['like']) && $userId) {
-    $trackId = $_POST['track_id'];
+    $trackId = $_POST['track_id']; // ID трека, который пользователь хочет лайкнуть
+
     try {
-        $stmt = $pdo->prepare("INSERT INTO likes (user_id, track_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE user_id=user_id");
+        // Добавление лайка или игнорирование, если уже существует
+        $stmt = $pdo->prepare("
+            INSERT INTO likes (user_id, track_id)
+            VALUES (?, ?)
+            ON DUPLICATE KEY UPDATE user_id=user_id
+        ");
         $stmt->execute([$userId, $trackId]);
         echo json_encode(['success' => true]);
         exit;
     } catch (Exception $e) {
+        // Обработка ошибок
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         exit;
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -104,44 +117,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['like']) && $userId) {
     <script>
         // Воспроизведение треков
         document.querySelectorAll('.play-track').forEach(button => {
+            // Для каждой кнопки воспроизведения добавляем обработчик события клика
             button.addEventListener('click', function () {
-                const audioPlayer = document.getElementById('audioPlayer');
-                const trackUrl = this.dataset.url;
+                const audioPlayer = document.getElementById('audioPlayer'); // Получаем элемент аудиоплеера
+                const trackUrl = this.dataset.url; // Получаем URL трека из data-атрибута кнопки
 
                 if (audioPlayer.src !== trackUrl) {
-                    audioPlayer.src = trackUrl;
-                    audioPlayer.play();
+                    // Если трек в плеере отличается от выбранного
+                    audioPlayer.src = trackUrl; // Обновляем источник трека в плеере
+                    audioPlayer.play(); // Начинаем воспроизведение
                 } else if (audioPlayer.paused) {
-                    audioPlayer.play();
+                    // Если трек совпадает, но плеер находится на паузе
+                    audioPlayer.play(); // Продолжаем воспроизведение
                 } else {
-                    audioPlayer.pause();
+                    // Если трек воспроизводится
+                    audioPlayer.pause(); // Ставим воспроизведение на паузу
                 }
             });
         });
 
         // Обработка лайков
         document.querySelectorAll('.like-form').forEach(form => {
+            // Для каждой формы лайков добавляем обработчик события отправки
             form.addEventListener('submit', function (e) {
-                e.preventDefault(); // Останавливаем стандартное поведение
+                e.preventDefault(); // Останавливаем стандартное поведение формы (перезагрузку страницы)
 
-                const formData = new FormData(this);
-                fetch('index.php', {
-                    method: 'POST',
-                    body: formData,
+                const formData = new FormData(this); // Собираем данные из формы
+                fetch('index.php', { // Отправляем POST-запрос на сервер
+                    method: 'POST', // Метод запроса
+                    body: formData, // Передаём данные формы
                 })
-                    .then(response => response.json())
+                    .then(response => response.json()) // Обрабатываем JSON-ответ от сервера
                     .then(data => {
                         if (data.success) {
-                            alert('Трек добавлен в избранное!');
+                            // Если запрос успешен
+                            alert('Трек добавлен в избранное!'); // Показываем уведомление пользователю
                         } else {
-                            alert('Ошибка: трек не удалось добавить в избранное.');
+                            // Если сервер вернул ошибку
+                            alert('Ошибка: трек не удалось добавить в избранное.'); // Показываем сообщение об ошибке
                         }
                     })
                     .catch(error => {
-                        console.error('Ошибка при лайке:', error);
+                        // Обработка ошибок, связанных с сетью или выполнением запроса
+                        console.error('Ошибка при лайке:', error); // Выводим ошибку в консоль
                     });
             });
         });
     </script>
+
 </body>
 </html>

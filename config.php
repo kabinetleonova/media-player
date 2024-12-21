@@ -1,4 +1,5 @@
 <?php
+// Работа с сессией
 // config.php
 session_start();
 

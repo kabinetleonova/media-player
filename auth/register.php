@@ -1,16 +1,26 @@
 <?php
+// Подключаем файл для работы с базой данных
 require_once __DIR__ . '/../includes/db.php';
+// Подключаем файл с вспомогательными функциями
 require_once __DIR__ . '/../includes/functions.php';
 
+// Проверяем, если запрос к серверу сделан методом POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Получаем email из отправленных данных формы
     $email = $_POST['email'];
+    // Хешируем пароль для безопасного хранения в базе данных
     $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
 
+    // Подготавливаем SQL-запрос для добавления нового пользователя в базу данных
     $stmt = $pdo->prepare("INSERT INTO users (email, password) VALUES (?, ?)");
+    // Выполняем запрос, передавая email и хешированный пароль
     $stmt->execute([$email, $password]);
+
+    // Перенаправляем пользователя на страницу входа после успешной регистрации
     redirect('login.php');
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
